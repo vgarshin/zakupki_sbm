@@ -13,8 +13,6 @@ from pandas.io.json import json_normalize
 
 MIN_TIME_SLEEP = 1
 MAX_TIME_SLEEP = 15
-RNUM_START = 19100000 #19119831
-RNUM_END   = 19200000 #19122000
 TIMEOUT = 10
 MAX_COUNTS = 5
 
@@ -83,19 +81,23 @@ def main():
     print('url: ', url_main)
     path = '{}/'.format(sys.argv[1])
     print('got path to save data: ', path)
-    table_name = '{}zakupki_scraping_smb_{}.csv'.format(path, str(sys.argv[2]))
-    print('got date: ', str(sys.argv[2]), ' | table name: ', table_name)
+    print('got date: ', str(sys.argv[2]))
     directory = '{}/'.format(sys.argv[3])
     print('got directory for cache: ', directory)
     dest_email = sys.argv[4]
     print('got email for notifications: ', dest_email)
+    RNUM_START = int(sys.argv[5])
+    RNUM_END   = int(sys.argv[6])
+    print('got reestr number start: ', RNUM_START, ' | reestr number end: ', RNUM_END)
+    table_name = '{}zakupki_scraping_smb_{}_from{}to{}.csv'.format(path, str(sys.argv[2]), RNUM_START, RNUM_END)
+    print('file name to save: ', table_name)
     count_trial = 0
     flag = True
     while flag:
         try:
             start_index = get_start_index(directory)
             print('trial: ', count_trial, ' | start index: ', start_index)
-            for reestr_num in range(RNUM_START + start_index, RNUM_END + 1):
+            for reestr_num in range(RNUM_START + start_index, RNUM_END):
                 data = []
                 url = '{}{}'.format(url_main, str(reestr_num))
                 html_i = get_html(url, TIMEOUT)
