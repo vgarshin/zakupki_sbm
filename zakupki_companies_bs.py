@@ -103,12 +103,30 @@ def main():
                 html_i = get_html(url, TIMEOUT)
                 soup_i = BeautifulSoup(html_i, 'html.parser')
                 try:
+                    #---base tables---
                     for part in soup_i.find_all('div', {'class': 'noticeTabBoxWrapper no-top-border'}):
                         table = part.find('table')
                         for row in table.find_all('tr'):
                             cols = row.find_all('td')
                             cols = [' '.join(x.text.split()) for x in cols]
                             data.append([x for x in cols if x])
+                    #---nested tables---
+                    part_count = 0
+                    for part in soup_i.find_all('div', {'class': 'addingTbl'}):
+                        table = part.find('table')
+                        print(table)
+                        headers = table.find_all('th')
+                        headers = [' '.join(x.text.split()) for x in headers]
+                        print(headers)
+                        row_count = 0
+                        for row_count, row in enumerate(table.find('tbody').find_all('tr')):
+                            print(row_count)
+                            cols_keys = ['add_info_{}_{}_{}'.format(part_count, row_count, x) for x in headers]
+                            cols = row.find_all('td')
+                            cols = [' '.join(x.text.split()) for x in cols]
+                            data.extend([[x, y] for x, y in zip(cols_keys, cols) if [x, y]])
+                            row_count += 1
+                        part_count += 1
                 except:
                     print('not found reestr_num: ', reestr_num)
                 data_dict = get_data_dict(data)
@@ -125,9 +143,9 @@ def main():
     print('data collected, saved to json files to folder: {}'.format(directory))
     df = get_dataframe(directory)
     print('data frame created of shape: ', df.shape)
-    df.to_csv(table_name)
+    df.to_csv(table_name, sep='\t')
     print('saved to file: ', table_name)
-    email_text = 'Data collected, table {} created'.format(table_name)
+    email_text = 'VTB Ya.Cloud: Data collected, table {} created'.format(table_name)
     error_mail = send_mail(dest_email, email_text)
     if error_mail:
         print('email was not sent to: {} | error: {}'.format(dest_email, error_mail))
