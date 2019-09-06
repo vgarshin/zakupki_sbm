@@ -13,6 +13,8 @@ from pandas.io.json import json_normalize
 
 MIN_TIME_SLEEP = 1
 MAX_TIME_SLEEP = 15
+RNUM_START = 19000000 #19119831
+RNUM_END   = 19200000 #19122000
 TIMEOUT = 10
 MAX_COUNTS = 5
 
@@ -65,7 +67,7 @@ def send_mail(dest_email, email_text):
     error = []
     try:
         email = 'app.notifications@yandex.ru'
-        password = 'Notify2019'
+        password = 'AppNotify2019'
         subject = 'Data load notification'
         message = 'From: {}\nTo: {}\nSubject: {}\n\n{}'.format(email, dest_email, subject, email_text)
         server = smtp.SMTP_SSL('smtp.yandex.com')
@@ -81,52 +83,30 @@ def main():
     print('url: ', url_main)
     path = '{}/'.format(sys.argv[1])
     print('got path to save data: ', path)
-    print('got date: ', str(sys.argv[2]))
+    table_name = '{}zakupki_scraping_smb_{}.csv'.format(path, str(sys.argv[2]))
+    print('got date: ', str(sys.argv[2]), ' | table name: ', table_name)
     directory = '{}/'.format(sys.argv[3])
     print('got directory for cache: ', directory)
     dest_email = sys.argv[4]
     print('got email for notifications: ', dest_email)
-    RNUM_START = int(sys.argv[5])
-    RNUM_END   = int(sys.argv[6])
-    print('got reestr number start: ', RNUM_START, ' | reestr number end: ', RNUM_END)
-    table_name = '{}zakupki_scraping_smb_{}_from{}to{}.csv'.format(path, str(sys.argv[2]), RNUM_START, RNUM_END)
-    print('file name to save: ', table_name)
     count_trial = 0
     flag = True
     while flag:
         try:
             start_index = get_start_index(directory)
             print('trial: ', count_trial, ' | start index: ', start_index)
-            for reestr_num in range(RNUM_START + start_index, RNUM_END):
+            for reestr_num in range(RNUM_START + start_index, RNUM_END + 1):
                 data = []
                 url = '{}{}'.format(url_main, str(reestr_num))
                 html_i = get_html(url, TIMEOUT)
                 soup_i = BeautifulSoup(html_i, 'html.parser')
                 try:
-                    #---base tables---
                     for part in soup_i.find_all('div', {'class': 'noticeTabBoxWrapper no-top-border'}):
                         table = part.find('table')
                         for row in table.find_all('tr'):
                             cols = row.find_all('td')
                             cols = [' '.join(x.text.split()) for x in cols]
                             data.append([x for x in cols if x])
-                    #---nested tables---
-                    part_count = 0
-                    for part in soup_i.find_all('div', {'class': 'addingTbl'}):
-                        table = part.find('table')
-                        print(table)
-                        headers = table.find_all('th')
-                        headers = [' '.join(x.text.split()) for x in headers]
-                        print(headers)
-                        row_count = 0
-                        for row_count, row in enumerate(table.find('tbody').find_all('tr')):
-                            print(row_count)
-                            cols_keys = ['add_info_{}_{}_{}'.format(part_count, row_count, x) for x in headers]
-                            cols = row.find_all('td')
-                            cols = [' '.join(x.text.split()) for x in cols]
-                            data.extend([[x, y] for x, y in zip(cols_keys, cols) if [x, y]])
-                            row_count += 1
-                        part_count += 1
                 except:
                     print('not found reestr_num: ', reestr_num)
                 data_dict = get_data_dict(data)
@@ -143,7 +123,7 @@ def main():
     print('data collected, saved to json files to folder: {}'.format(directory))
     df = get_dataframe(directory)
     print('data frame created of shape: ', df.shape)
-    df.to_csv(table_name, sep='\t')
+    df.to_csv(table_name)
     print('saved to file: ', table_name)
     email_text = 'VTB Ya.Cloud: Data collected, table {} created'.format(table_name)
     error_mail = send_mail(dest_email, email_text)
